@@ -13,10 +13,15 @@ interface ServerlessRoutingRule {
     RedirectRule: RoutingRule['Redirect'];
 }
 
-const buildCondition = (redirectPath: string): Condition => {
-    return {
-        KeyPrefixEquals: withoutLeadingSlash(redirectPath),
+const buildCondition = ({ fromPath, prefix }: GatsbyRedirect): Condition => {
+    const condition: Condition = {
+        KeyPrefixEquals: withoutLeadingSlash(fromPath),
     };
+    // Pages under a prefix redirect should still be served.
+    if (prefix) {
+        condition.HttpErrorCodeReturnedEquals = '404';
+    }
+    return condition;
 };
 
 const buildRedirect = (pluginOptions: S3PluginOptions, route: GatsbyRedirect): Redirect => {
@@ -44,7 +49,7 @@ const buildRedirect = (pluginOptions: S3PluginOptions, route: GatsbyRedirect): R
 const getRules = (pluginOptions: S3PluginOptions, routes: GatsbyRedirect[]): RoutingRules =>
     routes.map(route => ({
         Condition: {
-            ...buildCondition(route.fromPath),
+            ...buildCondition(route),
         },
         Redirect: {
             ...buildRedirect(pluginOptions, route),
